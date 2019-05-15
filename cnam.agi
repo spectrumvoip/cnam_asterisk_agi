@@ -3,9 +3,10 @@
 
 $timer_start = microtime(true);
 $source = "carrier";
-$cnam_userid = "";
-$cnam_secret = "";
-$cnam_url    = "";
+
+$cnam_userid = "changeme";
+$cnam_secret = "changeme";
+$cnam_server = "http://server.changeme.com";
 
 # Get the phpagi source at: https://sourceforge.net/projects/phpagi/files/phpagi/2.20/
 include ("/var/lib/asterisk/agi-bin/phpagi-2.20/phpagi.php");
@@ -131,7 +132,10 @@ function cnam_lookup_spectrum($cid_num, $called_num){
         global $cid_name;
         global $agi;
         global $source;
-		global $cnam_userid, $cnam_secret, $cnam_url;
+	global $cnam_userid'
+	global $cnam_secret;
+	global $cnam_server;
+
         $timer_func_start = microtime(true);
         $timer = round(($timer_func_start - $timer_start), 5);
 #       $agi->Verbose("msg1018 - $timer - $cid_num:$called_num:$cid_name - Checking cache");
@@ -142,7 +146,7 @@ function cnam_lookup_spectrum($cid_num, $called_num){
                 $source = 'cnamserver';
                 $timer = round((microtime(true) - $timer_start), 5);
 #               $agi->Verbose("msg1020 - $timer - $cid_num:$called_num:$cid_name - Name not found in cache, querying $source");
-                $url = "$cnam_url?userid=$cnam_userid&secret=$cnam_secret&number=$cid_num";
+                $url = "$cnam_server/?userid=$cnam_userid&secret=$cnam_secret&number=$cid_num";
                 $curl_handle=curl_init();
                 curl_setopt($curl_handle,CURLOPT_URL,$url);
                 curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);
