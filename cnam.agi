@@ -1,0 +1,206 @@
+#!/usr/bin/php-cgi -q
+<?php
+
+$timer_start = microtime(true);
+$source = "carrier";
+$cnam_userid = "";
+$cnam_secret = "";
+$cnam_url    = "";
+
+# Get the phpagi source at: https://sourceforge.net/projects/phpagi/files/phpagi/2.20/
+include ("/var/lib/asterisk/agi-bin/phpagi-2.20/phpagi.php");
+
+# Set to your timezone
+date_default_timezone_set('America/Chicago');
+
+# Set logging mode
+$display_error = 0 ;
+$display_warning = 0;
+$display_notice = 0 ;
+$log_error = 0;
+$log_warning = 0;
+$log_notice = 0;
+$called_num = '';
+
+$agi = new AGI();
+$cid_num = trim(ast_var('CALLERID(num)'));
+$cid_name = trim(ast_var('CALLERID(name)'));
+$called_num = trim(ast_var('EXTEN'));
+
+$timer = round((microtime(true) - $timer_start), 5);
+#$agi->Verbose("msg1001 - $timer - $cid_num:$called_num:$cid_name - Start");
+
+if( strlen($cid_num) == 7 ) {
+        $timer = round((microtime(true) - $timer_start), 5);
+#       $agi->Verbose("msg1097 - $timer - $cid_num:$called_num:$cid_name - Exiting after name set from 7digitTN");
+        die();
+}
+
+#$timer = round((microtime(true) - $timer_start), 5);
+#$agi->Verbose("msg1009 - $timer - $cid_num:$called_num:$cid_name - Start1");
+
+if( $cid_name == '' && (strlen($cid_num) != 7 || strlen($cid_num) != 13) ) {
+
+        # Fix where they send 12 digits beginning with +1
+        if(strlen($cid_num) == 12 && substr($cid_num, 0, 2) == "+1"){
+                $timer = round((microtime(true) - $timer_start), 5);
+#               $agi->Verbose("msg1010 - $timer - $cid_num:$called_num:$cid_name - stripping +1");
+                $cid_num = substr($cid_num, 2);
+        }
+
+        # Fix where they send 11 digits beginninng with 1
+        if(strlen($cid_num) == 11 && substr($cid_num, 0, 1) == "1"){
+                $timer = round((microtime(true) - $timer_start), 5);
+#               $agi->Verbose("msg1011 - $timer - $cid_num:$called_num:$cid_name - stripping 1");
+                $cid_num = substr($cid_num, 1);
+        }
+
+        # Fix where they send 11 digits beginning with +
+        if(strlen($cid_num) == 11 && substr($cid_num, 0, 1) == "+"){
+                $timer = round((microtime(true) - $timer_start), 5);
+#               $agi->Verbose("msg1012 - $timer - $cid_num:$called_num:$cid_name - stripping +");
+                $cid_num = substr($cid_num, 1);
+        }
+
+        if($cid_num == 'anonymous' || $cid_num == 'Anonymous'){
+                # If the CID num is anonymous then Set CID num to nothing and CID name to Anonymous
+
+                $agi->set_callerid('"Anonymous <Anonymous>"');
+                }
+        elseif($cid_num == 'restricted' || $cid_num == 'Restricted'){
+                # If the CID num is restricted then set it to nothing and CID name to Restricted
+#               $agi->set_callerid('"Restricted <Restricted>"');
+                die();
+                }
+        elseif(!is_numeric($cid_num)){
+                # If for some wierd reason CID num is NOT numeric then set it to nothing and CID name to Unavailable
+                $agi->set_callerid('"Unavailable <>"');
+                die();
+                }
+        elseif($cid_num < 2010000000 || $cid_num > 9899999999){
+                # If the CID num is less than 2010000000 or greate then 9899999999
+                # then set the CID num to nothing and chid name to  Out of area
+                # because no US or canadian CID are code is below 201 or higher than 989
+                $timer = round((microtime(true) - $timer_start), 5);
+                $agi->Verbose("msg1013 - $timer - $cid_num:$called_num:$cid_name - About to set to 'Out of Area'");
+                $agi->set_callerid('"Out of Area <'.$cid_num.'>"');
+                }
+        # next line changed || to && since we want to match both
+        elseif($cid_num > 2010000000 && $cid_num < 9899999999){
+                # If the caller id num is in the proper range then do the CID look up magic
+                $timer = round((microtime(true) - $timer_start), 5);
+#               $agi->Verbose("msg1014 - $timer - $cid_num:$called_num:$cid_name - about to cnam_lookup_spectrum()");
+                $cid_name = cnam_lookup_spectrum($cid_num, $called_num);
+                }
+        else{
+                # If for some weird reason the call makes it here then just let the script die and send me a message
+                # -----------Put in here some code to alert me------------#
+                $timer = round((microtime(true) - $timer_start), 5);
+                $agi->Verbose("msg1015 - $timer - $cid_num:$called_num:$cid_name - Falling out");
+                }
+} else {
+        $timer = round((microtime(true) - $timer_start), 5);
+#       $agi->Verbose("msg1098 - $timer - $cid_num:$called_num:$cid_name - Exiting after name exists from $source");
+        die();
+}
+
+$timer = round((microtime(true) - $timer_start), 5);
+#$agi->Verbose("msg1099 - $timer - $cid_num:$called_num:$cid_name - Exiting after name set from $source");
+die();
+
+# Methods to get Variables
+# $calling_num = ast_var('calling_num');
+function ast_var($my_var){
+        global $agi;
+        $my_var = $agi->get_variable($my_var);
+        $my_var = $my_var['data'];
+        return $my_var;
+}
+
+
+function ast_var_get_set($my_var, $ast_var){
+        global $agi;
+        $my_var = $agi->get_variable($my_var);
+        $my_var = $my_var[data];
+        $agi->set_variable("__$ast_var $my_var");
+        return $my_var;
+        }
+
+function cnam_lookup_spectrum($cid_num, $called_num){
+        global $timer_start;
+        global $cid_name;
+        global $agi;
+        global $source;
+		global $cnam_userid, $cnam_secret, $cnam_url;
+        $timer_func_start = microtime(true);
+        $timer = round(($timer_func_start - $timer_start), 5);
+#       $agi->Verbose("msg1018 - $timer - $cid_num:$called_num:$cid_name - Checking cache");
+        $cached_cnam = 0;
+        $timer = round(($timer_func_start - $timer_start), 5);
+#       $agi->Verbose("msg1019 - $timer - $cid_num:$called_num:$cid_name - Finished checking cache with result=$cached_cnam");
+        if ($cached_cnam === 0) {
+                $source = 'cnamserver';
+                $timer = round((microtime(true) - $timer_start), 5);
+#               $agi->Verbose("msg1020 - $timer - $cid_num:$called_num:$cid_name - Name not found in cache, querying $source");
+                $url = "$cnam_url?userid=$cnam_userid&secret=$cnam_secret&number=$cid_num";
+                $curl_handle=curl_init();
+                curl_setopt($curl_handle,CURLOPT_URL,$url);
+                curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);
+                curl_setopt($curl_handle,CURLOPT_TIMEOUT,4);
+                curl_setopt($curl_handle,CURLOPT_RETURNTRANSFER,true);
+                curl_setopt($curl_handle, CURLOPT_SSL_VERIFYPEER, false);
+                $cid_name = trim(curl_exec($curl_handle));
+                curl_close($curl_handle);
+                $timer_browse = microtime(true);
+                if($cid_name == '' || $cid_name == 'Access Denied'){
+                        die();
+                }
+        } else {
+                $source = 'cache';
+#               $agi->Verbose("msg1021 - $timer - $cid_num:$called_num:$cid_name - Name found in cache");
+                $cid_name = trim($cached_cnam);
+                $timer_browse = microtime(true);
+        }
+        $timer = round((microtime(true) - $timer_start), 5);
+#       $agi->Verbose("msg1022 - $timer - $cid_num:$called_num:$cid_name - About to set name to '$cid_name'");
+        $timer_start_set = microtime(true);
+        $agi->set_callerid('"'.$cid_name.' <'.$cid_num.'>"');
+        $timer_end_set = microtime(true);
+        $timer_browse = round(($timer_browse - $timer_func_start),5);
+        $timer_set    = round(($timer_end_set - $timer_start_set),5);
+        $timer = round((microtime(true) - $timer_start), 5);
+#       $agi->Verbose("msg1023 - $timer - $cid_num:$called_num:$cid_name - Finish set name to '$cid_name' Browse:$timer_browse seconds Set:$timer_set seconds");
+        return $cid_name;
+}
+
+function v($msg){
+        global $agi;
+        $agi->verbose("$msg");
+}
+
+function logger($type, $die, $msg){
+        global $agi, $display_error, $display_warning, $log_error, $log_warning, $display_notice, $log_notice;
+        $date_time = date("M d H:i:s");
+        if($type == 'w'){
+                if($display_warning == 1){
+                        $agi->Verbose("$[CNAM][WARNING] $msg");
+                        if($die == 1){
+                                die();
+                                }
+                        }
+                elseif($log_warning = 1){
+                        # Log the warning
+                        }
+                }
+        elseif($type == 'e'){
+                if($display_error == 1){
+                        $agi->Verbose("[CNAM][ERROR] DATE $msg");
+                        }
+                elseif($log_error == 1){
+                        # Log warning
+                        }
+                }
+
+}
+
+?>
