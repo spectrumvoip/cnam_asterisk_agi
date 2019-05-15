@@ -2,9 +2,9 @@
 Asterisk AGI script to query an http server for CNAM
 
 1. Download cnam.agi to /var/lib/asterisk/agi-bin/
-2. Download phpagi-2.20 to /var/lib/asterisk/agi-bin/
+2. Download and unzip phpagi-2.20 to /var/lib/asterisk/agi-bin/
 
-3. Call cnam.agi in /etc/asterisk/extensions.conf.  I call it like so in from-internal and from-external
+3. Call cnam.agi from /etc/asterisk/extensions.conf.  I call it like so in from-internal and from-external
 
 [from-internal]
 exten => XXXXXXXXXX, 1, AGI(cnam.agi)
